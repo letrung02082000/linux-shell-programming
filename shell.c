@@ -3,6 +3,7 @@
 #include<sys/types.h>
 #include<signal.h>
 #include<string.h>
+#include<sys/wait.h>
 
 static char* history_command[1024];
 static int argc = 0;
@@ -68,7 +69,7 @@ void execute_command(char* line)
     if(strcmp(argv[argc-1], "&") == 0)
     {
         is_concurrent = 1;
-        argv[argc-1] = '\0';
+        argv[argc-1] = NULL;
     }
     
     switch (new_pid)
@@ -91,11 +92,11 @@ void execute_command(char* line)
     default:
         if(is_concurrent == 0)
         {
-            wait(&child_status);
+            waitpid(new_pid, &child_status, 0);
         }
         else
         {
-            
+            printf("Command is running concurrently");
         }
         break;
     }
