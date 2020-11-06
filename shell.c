@@ -63,39 +63,55 @@ void execute_command(char* line)
     }
     argv[argc] = NULL;
 
-    //Kiem tra Redirect
-    //Neu > thi chuyen huong stdout
-    //Neu < thi chuyen huong stdin
+    //Redirect
+    //If > then redirect stdout
+    //If < then redirect stdin
     int fd[2] = {-1, -1};
+    int splitIndex;
+    int usePipe = 0;
 
     for(int i=0; i<argc; i++)
     {
-        if(strcmp(argv[i], ">") == 0)
+        if(strcmp(argv[i], "|") == 0)
         {
-            fd[1] = open(argv[i+1], O_WRONLY|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP|S_IWGRP);
-            
-            if(fd[1] == -1 || argv[i+1] == NULL)
-            {
-                printf("ERROR: Cannot open file");
-                return;
-            }
-
-            argv[i] = NULL;
+            usePipe = 1;
+            splitIndex = i;
             break;
         }
-        else if(strcmp(argv[i], "<") == 0)
-        {
-            fd[0] = open(argv[i+1], O_RDONLY);
+    }
 
-            if(fd[0] == -1)
+    if(usePipe == 0)
+    {
+
+        for(int i=0; i<argc; i++)
+        {
+            if(strcmp(argv[i], ">") == 0)
             {
-                printf("ERROR: Cannot open file");
-                return;
+                fd[1] = open(argv[i+1], O_WRONLY|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP|S_IWGRP);
+                
+                if(fd[1] == -1 || argv[i+1] == NULL)
+                {
+                    printf("ERROR: Cannot open file");
+                    return;
+                }
+
+                argv[i] = NULL;
+                break;
             }
-            argv[i] = NULL;
-            break;
+            else if(strcmp(argv[i], "<") == 0)
+            {
+                fd[0] = open(argv[i+1], O_RDONLY);
+
+                if(fd[0] == -1)
+                {
+                    printf("ERROR: Cannot open file");
+                    return;
+                }
+                argv[i] = NULL;
+                break;
+            }
+
         }
-        
     }
 
     pid_t new_pid;
@@ -116,33 +132,110 @@ void execute_command(char* line)
         exit(1);
         break;
     case 0:
-        if(fd[0] != -1)
+        if(usePipe == 1)
         {
-            if(dup2(fd[0], STDIN_FILENO) != STDIN_FILENO)
+            int pipes[2];
+            if(pipe(pipes) == -2)
             {
-                printf("ERROR: Cannot redirect the output");
-                return;
+                printf("ERROR: Cannot init a pipe");
+                break;
             }
-        }
-        else if(fd[1] != -1)
-        {
-            if(dup2(fd[1], STDOUT_FILENO) != STDOUT_FILENO)
-            {
-                printf("ERROR: Cannot redirect the output");
-                return;
-            }
-        }
+            // ls -a | grep a
 
-        if(execvp(argv[0], argv) < 0)
-        {
-            printf("ERROR: Cannot execute command");
-            exit(1);
+            //Split argv array into 2 arrays equal to 2 commands
+            int argc1 = splitIndex + 1;
+            int argc2 = argc - splitIndex;
+            char* command1[argc1];
+            char* command2[argc2];
+
+            for (size_t i = 0; i < splitIndex; i++)
+            {
+                command1[i] = argv[i];
+            }
+            command1[argc1 - 1] = NULL;
+
+            for (size_t i = 0; i < (argc2 - 1); i++)
+            {
+                command2[i] = argv[splitIndex + i + 1];
+            }
+            command2[argc2 - 1] = NULL;
+
+            for (size_t i = 0; i < argc1; i++)
+            {
+                printf("%s", command2[i]);
+            }
+            
+
+            //Create a child process to execute second command
+            pid_t pipe_pid = fork();
+
+            if(pipe_pid > 0)
+            {
+                wait(NULL);
+                close(pipes[1]); //close the write pipe
+                dup2(pipes[0], STDIN_FILENO);
+                close(pipes[0]);
+
+                if(execvp(command2[0], command2) == -1)
+                {
+                    printf("ERROR: Cannot execute command 2");
+                    exit(1);
+                }
+                else
+                {
+                    //Command is being executed
+                }
+            }
+            else if(pipe_pid == 0)
+            {
+                close(pipes[0]);
+                dup2(pipes[1], STDOUT_FILENO);
+                close(pipes[1]);
+
+                if(execvp(command1[0], command1) == -1)
+                {
+                    printf("ERROR: Cannot execute command 1");
+                    exit(1);
+                }
+                else
+                {
+                    //Command is being executed
+                }
+            }
+            close(pipes[0]);
+            close(pipes[1]);
         }
-        else
+        else if(usePipe == 0)
         {
-            //Command is being executed
+            if(fd[0] != -1)
+            {
+                if(dup2(fd[0], STDIN_FILENO) != STDIN_FILENO)
+                {
+                    printf("ERROR: Cannot redirect the output");
+                    return;
+                }
+            }
+            else if(fd[1] != -1)
+            {
+                if(dup2(fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+                {
+                    printf("ERROR: Cannot redirect the output");
+                    return;
+                }
+            }
+
+            if(execvp(argv[0], argv) < 0)
+            {
+                printf("ERROR: Cannot execute command");
+                exit(1);
+            }
+            else
+            {
+                //Command is being executed
+            }
+            break;
         }
-        break;
+        
     default:
         close(fd[0]);
         close(fd[1]);

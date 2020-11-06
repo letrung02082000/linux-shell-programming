@@ -1,0 +1,15 @@
+total 68
+drwxrwxr-x 4 kos kos  4096 Nov  7 01:02 .
+drwxr-xr-x 4 kos kos  4096 Nov  6 12:16 ..
+-rw-rw---- 1 kos kos    20 Nov  6 23:35 a.txt
+-rw-rw---- 1 kos kos    26 Nov  6 23:37 b.txt
+-rw-rw---- 1 kos kos    32 Nov  6 23:43 c.txt
+-rw-rw---- 1 kos kos    38 Nov  6 23:45 d.txt
+-rw-rw---- 1 kos kos     0 Nov  6 23:55 e.txt
+-rw-rw---- 1 kos kos    50 Nov  6 23:57 f.txt
+drwxrwxr-x 8 kos kos  4096 Nov  6 21:22 .git
+-rw-rw---- 1 kos kos    56 Nov  7 00:59 g.txt
+-rw-rw---- 1 kos kos     0 Nov  7 01:02 h.txt
+-rwxrwxr-x 1 kos kos 17496 Nov  7 01:02 shell
+-rw-rw-r-- 1 kos kos  5951 Nov  7 01:02 shell.c
+drwxrwxr-x 2 kos kos  4096 Nov  4 21:39 .vscode
