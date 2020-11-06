@@ -7,15 +7,13 @@
 static char* history_command[1024];
 static int argc = 0;
 
-void split_string(char* line, char** argv);
-void execute_command(char** argv);
+void execute_command(char* line);
 void add_to_history(char* command);
 void run_from_history();
 
 void main(void)
 {
     char line[1024];
-    char *argv[64];
     int should_run = 1;
 
     while (should_run)
@@ -28,25 +26,23 @@ void main(void)
         {
             run_from_history();
         }
+        else if(strcmp(line, "exit") == 0)
+        {
+            exit(0);
+        }
         else
         {
             add_to_history(line);
-            split_string(line, argv);
-
-            if(strcmp(argv[0], "exit") == 0)
-            {
-                exit(0);
-            }
-            execute_command(argv);
+            execute_command(line);
         }
-        
-
-        
+        printf("\n");
     }
 }
 
-void split_string(char* line, char** argv)
+void execute_command(char* line)
 {
+    char* argv[64];
+
     while (*line!='\0')
     {
         while (*line == ' ' || *line == '\t' || *line == '\n')
@@ -54,22 +50,16 @@ void split_string(char* line, char** argv)
             *line = '\0';
             line++;
         }
-        *argv = line;
-        argv++;
+        argv[argc] = line;
         argc++;
 
         while (*line != '\0' && *line != ' ' && *line != '\t' && *line != '\n')
         {
             line++;
         }
-
-        *argv = '\0';
-
     }
-}
+    argv[argc] = NULL;
 
-void execute_command(char** argv)
-{
     pid_t new_pid;
     int child_status;
     int is_concurrent = 0;
@@ -118,8 +108,5 @@ void add_to_history(char* command)
 
 void run_from_history()
 {
-    char* argv[64];
-
-    split_string(history_command[0],  argv);
-    execute_command(argv);
+    execute_command(history_command[0]);
 }
