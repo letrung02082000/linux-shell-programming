@@ -4,6 +4,8 @@
 #include<signal.h>
 #include<string.h>
 #include<sys/wait.h>
+#include<fcntl.h>
+#include <unistd.h>
 
 static char* history_command[1024];
 static int argc = 0;
@@ -61,6 +63,41 @@ void execute_command(char* line)
     }
     argv[argc] = NULL;
 
+    //Kiem tra Redirect
+    //Neu > thi chuyen huong stdout
+    //Neu < thi chuyen huong stdin
+    int fd[2] = {-1, -1};
+
+    for(int i=0; i<argc; i++)
+    {
+        if(strcmp(argv[i], ">") == 0)
+        {
+            fd[1] = open(argv[i+1], O_WRONLY|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP|S_IWGRP);
+            
+            if(fd[1] == -1 || argv[i+1] == NULL)
+            {
+                printf("ERROR: Cannot open file");
+                return;
+            }
+
+            argv[i] = NULL;
+            break;
+        }
+        else if(strcmp(argv[i], "<") == 0)
+        {
+            fd[0] = open(argv[i+1], O_RDONLY);
+
+            if(fd[0] == -1)
+            {
+                printf("ERROR: Cannot open file");
+                return;
+            }
+            argv[i] = NULL;
+            break;
+        }
+        
+    }
+
     pid_t new_pid;
     int child_status;
     int is_concurrent = 0;
@@ -79,7 +116,24 @@ void execute_command(char* line)
         exit(1);
         break;
     case 0:
-        if(execvp(*argv, argv) < 0)
+        if(fd[0] != -1)
+        {
+            if(dup2(fd[0], STDIN_FILENO) != STDIN_FILENO)
+            {
+                printf("ERROR: Cannot redirect the output");
+                return;
+            }
+        }
+        else if(fd[1] != -1)
+        {
+            if(dup2(fd[1], STDOUT_FILENO) != STDOUT_FILENO)
+            {
+                printf("ERROR: Cannot redirect the output");
+                return;
+            }
+        }
+
+        if(execvp(argv[0], argv) < 0)
         {
             printf("ERROR: Cannot execute command");
             exit(1);
@@ -90,6 +144,9 @@ void execute_command(char* line)
         }
         break;
     default:
+        close(fd[0]);
+        close(fd[1]);
+
         if(is_concurrent == 0)
         {
             waitpid(new_pid, &child_status, 0);
