@@ -82,7 +82,6 @@ void execute_command(char* line)
 
     if(usePipe == 0)
     {
-
         for(int i=0; i<argc; i++)
         {
             if(strcmp(argv[i], ">") == 0)
@@ -110,7 +109,6 @@ void execute_command(char* line)
                 argv[i] = NULL;
                 break;
             }
-
         }
     }
 
@@ -134,13 +132,13 @@ void execute_command(char* line)
     case 0:
         if(usePipe == 1)
         {
+            //Init pipe
             int pipes[2];
-            if(pipe(pipes) == -2)
+            if(pipe(pipes) == -1)
             {
                 printf("ERROR: Cannot init a pipe");
                 break;
             }
-            // ls -a | grep a
 
             //Split argv array into 2 arrays equal to 2 commands
             int argc1 = splitIndex + 1;
@@ -159,13 +157,7 @@ void execute_command(char* line)
                 command2[i] = argv[splitIndex + i + 1];
             }
             command2[argc2 - 1] = NULL;
-
-            for (size_t i = 0; i < argc1; i++)
-            {
-                printf("%s", command2[i]);
-            }
             
-
             //Create a child process to execute second command
             pid_t pipe_pid = fork();
 
@@ -188,7 +180,7 @@ void execute_command(char* line)
             }
             else if(pipe_pid == 0)
             {
-                close(pipes[0]);
+                close(pipes[0]); //close the read pipe
                 dup2(pipes[1], STDOUT_FILENO);
                 close(pipes[1]);
 
