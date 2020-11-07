@@ -1,4 +1,0 @@
-a.txt
-b.txt
-shell
-shell.c
